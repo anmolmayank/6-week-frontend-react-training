@@ -42,6 +42,11 @@ export interface TenantTableRowProps {
     isUploading: boolean;
 
     /**
+     * Edit tenant.
+     */
+    onEdit: () => void;
+
+    /**
      * Upload agreement.
      */
     onUpload: (file: File) => void;
@@ -70,6 +75,7 @@ export interface TenantTableRowProps {
 const TenantTableRow = ({
     tenant,
     isUploading,
+    onEdit,
     onUpload,
     onReplace,
     onDelete,
@@ -86,7 +92,10 @@ const TenantTableRow = ({
             </TableCell>
 
             <TableCell align="right">
-                ₹ {tenant.monthlyRent.toLocaleString("en-IN")}
+                ₹{" "}
+                {tenant.monthlyRent.toLocaleString(
+                    "en-IN",
+                )}
             </TableCell>
 
             <TableCell>
@@ -105,8 +114,12 @@ const TenantTableRow = ({
 
             <TableCell align="center">
                 <TenantRowActions
-                    agreement={tenant.rentalAgreement ?? null}
+                    agreement={
+                        tenant.rentalAgreement ??
+                        null
+                    }
                     isUploading={isUploading}
+                    onEdit={onEdit}
                     onUpload={onUpload}
                     onReplace={onReplace}
                     onDelete={onDelete}

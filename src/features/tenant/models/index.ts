@@ -10,4 +10,6 @@ export type {
     GetTenantsResponse,
     CreateTenantRequest,
     CreateTenantResponse,
+    UpdateTenantRequest,
+    UpdateTenantResponse
 } from "./tenant.models";

@@ -5,21 +5,23 @@
  *
  * Purpose
  * -------
- * Displays a dialog for creating a new tenant.
+ * Displays a dialog for creating or editing a tenant.
  *
  * Responsibilities
  * ----------------
  * - Collect tenant details.
  * - Validate tenant input.
  * - Create a tenant.
+ * - Update an existing tenant.
  * - Display success/error feedback through the global Snackbar.
- * - Close dialog after successful creation.
+ * - Close dialog after successful operation.
  *
  * ============================================================================
  */
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from "react";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
     Button,
     Dialog,
@@ -37,7 +39,12 @@ import {
     type SubmitHandler,
 } from "react-hook-form";
 
-import { useCreateTenantMutation } from "../api";
+import {
+    useCreateTenantMutation,
+    useUpdateTenantMutation,
+} from "../api";
+
+import type { Tenant } from "../models";
 
 import {
     createTenantSchema,
@@ -64,7 +71,31 @@ export interface TenantDialogProps {
      * Close dialog callback.
      */
     onClose: () => void;
+
+    /**
+     * Determines whether the dialog is creating or editing.
+     */
+    mode?: "create" | "edit";
+
+    /**
+     * Tenant being edited.
+     *
+     * Required when mode is "edit".
+     */
+    tenant?: Tenant | null;
 }
+
+/**
+ * ============================================================================
+ * Default Form Values
+ * ============================================================================
+ */
+
+const defaultFormValues: CreateTenantFormData = {
+    tenantName: "",
+    apartmentNumber: "",
+    monthlyRent: 0,
+};
 
 /**
  * ============================================================================
@@ -75,28 +106,48 @@ export interface TenantDialogProps {
 const TenantDialog = ({
     open,
     onClose,
+    mode = "create",
+    tenant = null,
 }: TenantDialogProps) => {
     /**
      * ------------------------------------------------------------------------
-     * Hooks
+     * Mutations
      * ------------------------------------------------------------------------
      */
 
-    /**
-     * Tenant creation mutation provided by RTK Query.
-     */
     const [
         createTenant,
-        { isLoading },
+        {
+            isLoading: isCreating,
+        },
     ] = useCreateTenantMutation();
 
+    const [
+        updateTenant,
+        {
+            isLoading: isUpdating,
+        },
+    ] = useUpdateTenantMutation();
+
     /**
-     * Global Snackbar notifications.
+     * ------------------------------------------------------------------------
+     * Feedback
+     * ------------------------------------------------------------------------
      */
+
     const {
         success,
         error: showError,
     } = useSnackbar();
+
+    /**
+     * ------------------------------------------------------------------------
+     * Loading State
+     * ------------------------------------------------------------------------
+     */
+
+    const isLoading =
+        isCreating || isUpdating;
 
     /**
      * ------------------------------------------------------------------------
@@ -115,13 +166,49 @@ const TenantDialog = ({
         resolver: zodResolver(
             createTenantSchema,
         ),
-
-        defaultValues: {
-            tenantName: "",
-            apartmentNumber: "",
-            monthlyRent: 0,
-        },
+        defaultValues:
+            defaultFormValues,
     });
+
+    /**
+     * ------------------------------------------------------------------------
+     * Populate Form
+     * ------------------------------------------------------------------------
+     *
+     * Populate the form when editing an existing tenant.
+     *
+     * Reset the form when creating a new tenant.
+     */
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        if (
+            mode === "edit" &&
+            tenant
+        ) {
+            reset({
+                tenantName:
+                    tenant.tenantName,
+
+                apartmentNumber:
+                    tenant.apartmentNumber,
+
+                monthlyRent:
+                    tenant.monthlyRent,
+            });
+
+            return;
+        }
+
+        reset(defaultFormValues);
+    }, [
+        open,
+        mode,
+        tenant,
+        reset,
+    ]);
 
     /**
      * ------------------------------------------------------------------------
@@ -134,65 +221,123 @@ const TenantDialog = ({
     > = async (formData) => {
         try {
             /**
-             * ------------------------------------------------------------
-             * Create tenant.
-             * ------------------------------------------------------------
-             *
-             * `.unwrap()` causes RTK Query to reject the Promise when
-             * the API request fails.
+             * --------------------------------------------------------------
+             * Edit Existing Tenant
+             * --------------------------------------------------------------
              */
+            if (
+                mode === "edit" &&
+                tenant
+            ) {
+                await updateTenant({
+                    tenantId: tenant._id,
+                    body: formData,
+                }).unwrap();
+
+                success(
+                    "Tenant updated successfully.",
+                );
+
+                reset(
+                    defaultFormValues,
+                );
+
+                onClose();
+
+                return;
+            }
+
+            /**
+             * --------------------------------------------------------------
+             * Create New Tenant
+             * --------------------------------------------------------------
+             */
+
             await createTenant(
                 formData,
             ).unwrap();
 
-            /**
-             * ------------------------------------------------------------
-             * Reset form after successful creation.
-             * ------------------------------------------------------------
-             */
-            reset();
-
-            /**
-             * ------------------------------------------------------------
-             * Show success notification.
-             * ------------------------------------------------------------
-             */
             success(
                 "Tenant created successfully.",
             );
 
-            /**
-             * ------------------------------------------------------------
-             * Close the dialog.
-             * ------------------------------------------------------------
-             */
+            reset(
+                defaultFormValues,
+            );
+
             onClose();
         } catch (error) {
             /**
-             * ------------------------------------------------------------
-             * Extract backend error message.
-             * ------------------------------------------------------------
+             * --------------------------------------------------------------
+             * Extract Backend Error
+             * --------------------------------------------------------------
              */
+
             const apiResponse =
                 error as FetchBaseQueryError & {
                     data?: ApiErrorResponse;
                 };
 
-            /**
-             * Use the backend-provided error message when available.
-             */
-            const message =
-                apiResponse.data?.message ??
+            let errorMessage =
                 "Unable to create tenant.";
 
-            /**
-             * ------------------------------------------------------------
-             * Display API error through global Snackbar.
-             * ------------------------------------------------------------
-             */
-            showError(message);
+            if (mode === "edit") {
+                errorMessage =
+                    "Unable to update tenant.";
+            }
+
+            showError(
+                apiResponse.data?.message ??
+                    errorMessage,
+            );
         }
     };
+
+    /**
+     * ------------------------------------------------------------------------
+     * Close Handler
+     * ------------------------------------------------------------------------
+     *
+     * Prevent closing while an API operation is running.
+     */
+
+    const handleClose = () => {
+        if (isLoading) {
+            return;
+        }
+
+        reset(defaultFormValues);
+
+        onClose();
+    };
+
+    /**
+     * ------------------------------------------------------------------------
+     * Submit Button Label
+     * ------------------------------------------------------------------------
+     *
+     * Avoid nested ternary expressions for readability.
+     */
+
+    let submitButtonLabel = "Save";
+
+    if (isLoading) {
+        submitButtonLabel = "Saving...";
+    } else if (mode === "edit") {
+        submitButtonLabel = "Update";
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Dialog Title
+     * ------------------------------------------------------------------------
+     */
+
+    let dialogTitle = "Add Tenant";
+
+    if (mode === "edit") {
+        dialogTitle = "Edit Tenant";
+    }
 
     /**
      * ------------------------------------------------------------------------
@@ -203,20 +348,18 @@ const TenantDialog = ({
     return (
         <Dialog
             open={open}
-            onClose={
-                isLoading
-                    ? undefined
-                    : onClose
-            }
+            onClose={handleClose}
             fullWidth
             maxWidth="sm"
         >
             <DialogTitle>
-                Add Tenant
+                {dialogTitle}
             </DialogTitle>
 
             <form
-                onSubmit={handleSubmit(onSubmit)}
+                onSubmit={handleSubmit(
+                    onSubmit,
+                )}
                 noValidate
             >
                 <DialogContent>
@@ -227,7 +370,9 @@ const TenantDialog = ({
                     <Controller
                         name="tenantName"
                         control={control}
-                        render={({ field }) => (
+                        render={({
+                            field,
+                        }) => (
                             <TextField
                                 {...field}
                                 label="Tenant Name"
@@ -237,7 +382,8 @@ const TenantDialog = ({
                                     errors.tenantName,
                                 )}
                                 helperText={
-                                    errors.tenantName
+                                    errors
+                                        .tenantName
                                         ?.message
                                 }
                             />
@@ -251,7 +397,9 @@ const TenantDialog = ({
                     <Controller
                         name="apartmentNumber"
                         control={control}
-                        render={({ field }) => (
+                        render={({
+                            field,
+                        }) => (
                             <TextField
                                 {...field}
                                 label="Apartment Number"
@@ -276,7 +424,9 @@ const TenantDialog = ({
                     <Controller
                         name="monthlyRent"
                         control={control}
-                        render={({ field }) => (
+                        render={({
+                            field,
+                        }) => (
                             <TextField
                                 {...field}
                                 label="Monthly Rent"
@@ -287,13 +437,17 @@ const TenantDialog = ({
                                     errors.monthlyRent,
                                 )}
                                 helperText={
-                                    errors.monthlyRent
+                                    errors
+                                        .monthlyRent
                                         ?.message
                                 }
-                                onChange={(event) =>
+                                onChange={(
+                                    event,
+                                ) =>
                                     field.onChange(
                                         Number(
-                                            event.target
+                                            event
+                                                .target
                                                 .value,
                                         ),
                                     )
@@ -305,8 +459,12 @@ const TenantDialog = ({
 
                 <DialogActions>
                     <Button
-                        onClick={onClose}
-                        disabled={isLoading}
+                        onClick={
+                            handleClose
+                        }
+                        disabled={
+                            isLoading
+                        }
                     >
                         Cancel
                     </Button>
@@ -314,11 +472,11 @@ const TenantDialog = ({
                     <Button
                         type="submit"
                         variant="contained"
-                        disabled={isLoading}
+                        disabled={
+                            isLoading
+                        }
                     >
-                        {isLoading
-                            ? "Saving..."
-                            : "Save"}
+                        {submitButtonLabel}
                     </Button>
                 </DialogActions>
             </form>

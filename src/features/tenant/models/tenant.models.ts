@@ -76,3 +76,30 @@ export interface CreateTenantRequest {
  * ============================================================================
  */
 export type CreateTenantResponse = ApiResponse<Tenant>;
+
+/**
+ * ============================================================================
+ * Update Tenant Request
+ * ============================================================================
+ *
+ * Used for partial tenant updates.
+ *
+ * Rental agreement is intentionally excluded.
+ * Agreement operations use dedicated endpoints.
+ *
+ * ============================================================================
+ */
+export interface UpdateTenantRequest {
+    tenantName?: string;
+
+    apartmentNumber?: string;
+
+    monthlyRent?: number;
+}
+
+/**
+ * ============================================================================
+ * Update Tenant Response
+ * ============================================================================
+ */
+export type UpdateTenantResponse = ApiResponse<Tenant>;

@@ -5,10 +5,11 @@
  *
  * Purpose
  * -------
- * Displays actions for a tenant's rental agreement.
+ * Displays actions for a tenant record and rental agreement.
  *
  * Responsibilities
  * ----------------
+ * - Edit tenant.
  * - Upload agreement.
  * - Replace agreement.
  * - Delete agreement.
@@ -18,7 +19,7 @@
 
 import { useRef } from "react";
 
-import { Button, Box } from "@mui/material";
+import { Box, Button } from "@mui/material";
 
 import type { RentalAgreement } from "../models";
 
@@ -31,6 +32,8 @@ export interface TenantRowActionsProps {
     agreement: RentalAgreement | null;
 
     isUploading?: boolean;
+
+    onEdit: () => void;
 
     onUpload: (file: File) => void;
 
@@ -47,6 +50,7 @@ export interface TenantRowActionsProps {
 const TenantRowActions = ({
     agreement,
     isUploading = false,
+    onEdit,
     onUpload,
     onReplace,
     onDelete,
@@ -56,7 +60,8 @@ const TenantRowActions = ({
      * File Input Reference
      * ------------------------------------------------------------------------
      */
-    const inputRef = useRef<HTMLInputElement>(null);
+    const inputRef =
+        useRef<HTMLInputElement>(null);
 
     /**
      * ------------------------------------------------------------------------
@@ -75,7 +80,8 @@ const TenantRowActions = ({
     const handleFileChange = (
         event: React.ChangeEvent<HTMLInputElement>,
     ) => {
-        const file = event.target.files?.[0];
+        const file =
+            event.target.files?.[0];
 
         if (!file) {
             return;
@@ -105,7 +111,9 @@ const TenantRowActions = ({
                 type="file"
                 hidden
                 accept="application/pdf"
-                onChange={handleFileChange}
+                onChange={
+                    handleFileChange
+                }
             />
 
             <Box
@@ -115,21 +123,46 @@ const TenantRowActions = ({
                     justifyContent: "center",
                 }}
             >
+                {/* ============================================================
+                    Edit Tenant
+                ============================================================= */}
                 <Button
                     size="small"
                     variant="outlined"
-                    onClick={handleChooseFile}
+                    onClick={onEdit}
                     disabled={isUploading}
                 >
-                    {agreement ? "Replace" : "Upload"}
+                    Edit
                 </Button>
 
+                {/* ============================================================
+                    Upload / Replace Agreement
+                ============================================================= */}
+                <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={
+                        handleChooseFile
+                    }
+                    disabled={isUploading}
+                >
+                    {agreement
+                        ? "Replace"
+                        : "Upload"}
+                </Button>
+
+                {/* ============================================================
+                    Delete Agreement
+                ============================================================= */}
                 {agreement && (
                     <Button
                         size="small"
                         variant="outlined"
                         color="error"
                         onClick={onDelete}
+                        disabled={
+                            isUploading
+                        }
                     >
                         Delete
                     </Button>

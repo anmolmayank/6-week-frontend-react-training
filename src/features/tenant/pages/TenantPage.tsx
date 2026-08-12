@@ -12,7 +12,9 @@
  * - Display page heading.
  * - Display page actions.
  * - Display tenant table.
- * - Open/Close Tenant dialog.
+ * - Open Tenant dialog for creating a tenant.
+ * - Open Tenant dialog for editing a tenant.
+ * - Close Tenant dialog.
  *
  * ============================================================================
  */
@@ -28,31 +30,80 @@ import {
 import TenantDialog from "../components/TenantDialog";
 import TenantTable from "../components/TenantTable";
 
+import type { Tenant } from "../models";
+
 /**
  * ============================================================================
  * Tenant Page
  * ============================================================================
  */
+
 const TenantPage = () => {
     /**
      * ------------------------------------------------------------------------
      * Local State
      * ------------------------------------------------------------------------
+     *
+     * `null` means the dialog is in create mode.
+     *
+     * A Tenant object means the dialog is in edit mode.
      */
-    const [isDialogOpen, setIsDialogOpen] =
-        useState(false);
+    const [
+        selectedTenant,
+        setSelectedTenant,
+    ] = useState<Tenant | null>(null);
 
     /**
      * ------------------------------------------------------------------------
-     * Event Handlers
+     * Dialog State
+     * ------------------------------------------------------------------------
+     *
+     * The dialog can be open even when no tenant is selected.
+     *
+     * This allows the same dialog to handle:
+     *
+     * Create → selectedTenant = null
+     * Edit   → selectedTenant = Tenant
+     */
+    const [
+        isDialogOpen,
+        setIsDialogOpen,
+    ] = useState(false);
+
+    /**
+     * ------------------------------------------------------------------------
+     * Add Tenant
      * ------------------------------------------------------------------------
      */
-    const handleOpenDialog = () => {
+
+    const handleOpenCreateDialog =
+        () => {
+            setSelectedTenant(null);
+            setIsDialogOpen(true);
+        };
+
+    /**
+     * ------------------------------------------------------------------------
+     * Edit Tenant
+     * ------------------------------------------------------------------------
+     */
+
+    const handleOpenEditDialog = (
+        tenant: Tenant,
+    ) => {
+        setSelectedTenant(tenant);
         setIsDialogOpen(true);
     };
 
+    /**
+     * ------------------------------------------------------------------------
+     * Close Dialog
+     * ------------------------------------------------------------------------
+     */
+
     const handleCloseDialog = () => {
         setIsDialogOpen(false);
+        setSelectedTenant(null);
     };
 
     /**
@@ -60,12 +111,14 @@ const TenantPage = () => {
      * Render
      * ------------------------------------------------------------------------
      */
+
     return (
         <>
             <Box>
                 {/* ============================================================
                     Page Header
                 ============================================================= */}
+
                 <Box
                     sx={{
                         display: "flex",
@@ -91,7 +144,9 @@ const TenantPage = () => {
 
                     <Button
                         variant="contained"
-                        onClick={handleOpenDialog}
+                        onClick={
+                            handleOpenCreateDialog
+                        }
                     >
                         Add Tenant
                     </Button>
@@ -100,15 +155,31 @@ const TenantPage = () => {
                 {/* ============================================================
                     Tenant Table
                 ============================================================= */}
-                <TenantTable />
+
+                <TenantTable
+                    onEdit={
+                        handleOpenEditDialog
+                    }
+                />
             </Box>
 
             {/* ================================================================
                 Tenant Dialog
             ================================================================= */}
+
             <TenantDialog
                 open={isDialogOpen}
-                onClose={handleCloseDialog}
+                onClose={
+                    handleCloseDialog
+                }
+                mode={
+                    selectedTenant
+                        ? "edit"
+                        : "create"
+                }
+                tenant={
+                    selectedTenant
+                }
             />
         </>
     );

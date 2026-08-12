@@ -11,6 +11,7 @@
  * ----------------
  * - Fetch tenant records.
  * - Display tenant records.
+ * - Edit tenant records.
  * - Upload rental agreements.
  * - Replace rental agreements.
  * - Delete rental agreements.
@@ -44,6 +45,8 @@ import {
     useUploadAgreementMutation,
 } from "../api";
 
+import type { Tenant } from "../models";
+
 import TenantTableRow from "./TenantTableRow";
 
 import { ConfirmDialog } from "@/feedback/ConfirmDialog";
@@ -53,11 +56,26 @@ import type { ApiErrorResponse } from "@/shared/models";
 
 /**
  * ============================================================================
+ * Component Props
+ * ============================================================================
+ */
+
+export interface TenantTableProps {
+    /**
+     * Called when the user selects a tenant for editing.
+     */
+    onEdit: (tenant: Tenant) => void;
+}
+
+/**
+ * ============================================================================
  * Tenant Table
  * ============================================================================
  */
 
-const TenantTable = () => {
+const TenantTable = ({
+    onEdit,
+}: TenantTableProps) => {
     /**
      * ------------------------------------------------------------------------
      * Local State
@@ -214,15 +232,14 @@ const TenantTable = () => {
      * ------------------------------------------------------------------------
      * Request Delete Confirmation
      * ------------------------------------------------------------------------
-     *
-     * This does NOT delete anything.
-     *
-     * It only stores the selected tenant ID and opens ConfirmDialog.
      */
+
     const handleDeleteRequest = (
         tenantId: string,
     ) => {
-        setTenantToDelete(tenantId);
+        setTenantToDelete(
+            tenantId,
+        );
     };
 
     /**
@@ -232,12 +249,6 @@ const TenantTable = () => {
      */
 
     const handleCancelDelete = () => {
-        /**
-         * Clear the selected tenant.
-         *
-         * This also closes ConfirmDialog because its `open` value
-         * depends on tenantToDelete.
-         */
         setTenantToDelete(null);
     };
 
@@ -248,39 +259,21 @@ const TenantTable = () => {
      */
 
     const handleConfirmDelete = async () => {
-        /**
-         * There is nothing to delete if no tenant has been selected.
-         */
         if (!tenantToDelete) {
             return;
         }
 
         try {
-            /**
-             * Execute the DELETE API request.
-             */
             await deleteAgreement(
                 tenantToDelete,
             ).unwrap();
 
-            /**
-             * Notify the user after successful deletion.
-             */
             success(
                 "Rental agreement deleted successfully.",
             );
 
-            /**
-             * Close the confirmation dialog.
-             */
             setTenantToDelete(null);
         } catch (error) {
-            /**
-             * Keep the dialog open when deletion fails.
-             *
-             * This allows the user to understand the failure and
-             * retry or cancel.
-             */
             showError(
                 getErrorMessage(
                     error,
@@ -300,25 +293,16 @@ const TenantTable = () => {
         tenantId: string,
     ) => {
         try {
-            /**
-             * Request the rental agreement from the backend.
-             */
             const blob =
                 await downloadAgreement(
                     tenantId,
                 ).unwrap();
 
-            /**
-             * Create a temporary browser URL.
-             */
             const url =
                 window.URL.createObjectURL(
                     blob,
                 );
 
-            /**
-             * Create a temporary download link.
-             */
             const link =
                 document.createElement("a");
 
@@ -328,24 +312,14 @@ const TenantTable = () => {
 
             document.body.appendChild(link);
 
-            /**
-             * Start the browser download.
-             */
             link.click();
 
-            /**
-             * Remove temporary link.
-             */
             link.remove();
 
-            /**
-             * Release temporary object URL.
-             */
-            window.URL.revokeObjectURL(url);
+            window.URL.revokeObjectURL(
+                url,
+            );
         } catch (error) {
-            /**
-             * Display download errors through Snackbar.
-             */
             showError(
                 getErrorMessage(
                     error,
@@ -446,15 +420,28 @@ const TenantTable = () => {
                         {data.data.map(
                             (tenant) => (
                                 <TenantTableRow
-                                    key={tenant._id}
-                                    tenant={tenant}
-                                    onUpload={(file) =>
+                                    key={
+                                        tenant._id
+                                    }
+                                    tenant={
+                                        tenant
+                                    }
+                                    onEdit={() =>
+                                        onEdit(
+                                            tenant,
+                                        )
+                                    }
+                                    onUpload={(
+                                        file,
+                                    ) =>
                                         handleUpload(
                                             tenant._id,
                                             file,
                                         )
                                     }
-                                    onReplace={(file) =>
+                                    onReplace={(
+                                        file,
+                                    ) =>
                                         handleReplace(
                                             tenant._id,
                                             file,

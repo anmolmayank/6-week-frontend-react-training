@@ -11,6 +11,10 @@
  * ----------------
  * - Get tenants.
  * - Create tenant.
+ * - Update tenant.
+ * - Upload rental agreement.
+ * - Download rental agreement.
+ * - Delete rental agreement.
  *
  * ============================================================================
  */
@@ -18,9 +22,11 @@
 import { baseApi } from "@/app/api/baseApi";
 
 import type {
-  CreateTenantRequest,
-  CreateTenantResponse,
-  GetTenantsResponse,
+    CreateTenantRequest,
+    CreateTenantResponse,
+    GetTenantsResponse,
+    UpdateTenantRequest,
+    UpdateTenantResponse,
 } from "../models";
 
 /**
@@ -28,106 +34,166 @@ import type {
  * Tenant Endpoints
  * ============================================================================
  */
-export const tenantApi = baseApi.injectEndpoints({
-  endpoints: (builder) => ({
-    /**
-     * --------------------------------------------------------------------
-     * Get Tenants
-     * --------------------------------------------------------------------
-     */
-    getTenants: builder.query<GetTenantsResponse, void>({
-      query: () => ({
-        url: "/tenants",
-        method: "GET",
-      }),
 
-      providesTags: ["Tenant"],
-    }),
+export const tenantApi =
+    baseApi.injectEndpoints({
+        endpoints: (builder) => ({
+            /**
+             * --------------------------------------------------------------
+             * Get Tenants
+             * --------------------------------------------------------------
+             */
+            getTenants:
+                builder.query<
+                    GetTenantsResponse,
+                    void
+                >({
+                    query: () => ({
+                        url: "/tenants",
+                        method: "GET",
+                    }),
 
-    /**
-     * --------------------------------------------------------------------
-     * Create Tenant
-     * --------------------------------------------------------------------
-     */
-    createTenant: builder.mutation<CreateTenantResponse, CreateTenantRequest>({
-      query: (body) => ({
-        url: "/tenants",
-        method: "POST",
-        body,
-      }),
+                    providesTags: ["Tenant"],
+                }),
 
-      invalidatesTags: ["Tenant"],
-    }),
+            /**
+             * --------------------------------------------------------------
+             * Create Tenant
+             * --------------------------------------------------------------
+             */
+            createTenant:
+                builder.mutation<
+                    CreateTenantResponse,
+                    CreateTenantRequest
+                >({
+                    query: (body) => ({
+                        url: "/tenants",
+                        method: "POST",
+                        body,
+                    }),
 
-    /**
-     * --------------------------------------------------------------------
-     * Upload Rental Agreement
-     * --------------------------------------------------------------------
-     */
-    uploadAgreement: builder.mutation<
-      void,
-      {
-        tenantId: string;
-        file: File;
-      }
-    >({
-      query: ({ tenantId, file }) => {
-        const formData = new FormData();
+                    invalidatesTags: [
+                        "Tenant",
+                    ],
+                }),
 
-        formData.append("agreement", file);
+            /**
+             * --------------------------------------------------------------
+             * Update Tenant
+             * --------------------------------------------------------------
+             */
+            updateTenant:
+                builder.mutation<
+                    UpdateTenantResponse,
+                    {
+                        tenantId: string;
+                        body: UpdateTenantRequest;
+                    }
+                >({
+                    query: ({
+                        tenantId,
+                        body,
+                    }) => ({
+                        url: `/tenants/${tenantId}`,
+                        method: "PATCH",
+                        body,
+                    }),
 
-        return {
-          url: `/tenants/${tenantId}/agreement`,
-          method: "POST",
-          body: formData,
-        };
-      },
+                    invalidatesTags: [
+                        "Tenant",
+                    ],
+                }),
 
-      invalidatesTags: ["Tenant"],
-    }),
+            /**
+             * --------------------------------------------------------------
+             * Upload Rental Agreement
+             * --------------------------------------------------------------
+             */
+            uploadAgreement:
+                builder.mutation<
+                    void,
+                    {
+                        tenantId: string;
+                        file: File;
+                    }
+                >({
+                    query: ({
+                        tenantId,
+                        file,
+                    }) => {
+                        const formData =
+                            new FormData();
 
-    /**
-     * --------------------------------------------------------------------
-     * Download Rental Agreement
-     * --------------------------------------------------------------------
-     */
-    downloadAgreement: builder.mutation<Blob, string>({
-      query: (tenantId) => ({
-        url: `/tenants/${tenantId}/agreement`,
-        method: "GET",
+                        formData.append(
+                            "agreement",
+                            file,
+                        );
 
-        /**
-         * Tell fetchBaseQuery to return a Blob.
-         */
-        responseHandler: (response) => response.blob(),
-      }),
-    }),
+                        return {
+                            url: `/tenants/${tenantId}/agreement`,
+                            method: "POST",
+                            body: formData,
+                        };
+                    },
 
-    /**
-     * --------------------------------------------------------------------
-     * Delete Rental Agreement
-     * --------------------------------------------------------------------
-     */
-    deleteAgreement: builder.mutation<void, string>({
-      query: (tenantId) => ({
-        url: `/tenants/${tenantId}/agreement`,
-        method: "DELETE",
-      }),
+                    invalidatesTags: [
+                        "Tenant",
+                    ],
+                }),
 
-      invalidatesTags: ["Tenant"],
-    }),
-  }),
-});
+            /**
+             * --------------------------------------------------------------
+             * Download Rental Agreement
+             * --------------------------------------------------------------
+             */
+            downloadAgreement:
+                builder.mutation<
+                    Blob,
+                    string
+                >({
+                    query: (tenantId) => ({
+                        url: `/tenants/${tenantId}/agreement`,
+                        method: "GET",
+
+                        responseHandler:
+                            (response) =>
+                                response.blob(),
+                    }),
+                }),
+
+            /**
+             * --------------------------------------------------------------
+             * Delete Rental Agreement
+             * --------------------------------------------------------------
+             */
+            deleteAgreement:
+                builder.mutation<
+                    void,
+                    string
+                >({
+                    query: (tenantId) => ({
+                        url: `/tenants/${tenantId}/agreement`,
+                        method: "DELETE",
+                    }),
+
+                    invalidatesTags: [
+                        "Tenant",
+                    ],
+                }),
+        }),
+    });
 
 /**
  * ============================================================================
  * RTK Query Hooks
  * ============================================================================
  */
+
 export const {
-  useGetTenantsQuery,
-  useCreateTenantMutation,
-  useUploadAgreementMutation,
-  useDownloadAgreementMutation,
-  useDeleteAgreementMutation,
+    useGetTenantsQuery,
+    useCreateTenantMutation,
+    useUpdateTenantMutation,
+    useUploadAgreementMutation,
+    useDownloadAgreementMutation,
+    useDeleteAgreementMutation,
 } = tenantApi;
