@@ -10,18 +10,17 @@
  * Responsibilities
  * ----------------
  * - Collect tenant details.
- * - Validate user input.
+ * - Validate tenant input.
  * - Create a tenant.
- * * Close dialog after successful creation.
+ * - Display success/error feedback through the global Snackbar.
+ * - Close dialog after successful creation.
  *
  * ============================================================================
  */
 
-import { useState } from "react";
-
 import { zodResolver } from "@hookform/resolvers/zod";
+
 import {
-    Alert,
     Button,
     Dialog,
     DialogActions,
@@ -29,7 +28,9 @@ import {
     DialogTitle,
     TextField,
 } from "@mui/material";
-import { FetchBaseQueryError } from "@reduxjs/toolkit/query";
+
+import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
+
 import {
     Controller,
     useForm,
@@ -37,10 +38,13 @@ import {
 } from "react-hook-form";
 
 import { useCreateTenantMutation } from "../api";
+
 import {
     createTenantSchema,
     type CreateTenantFormData,
 } from "../validation";
+
+import { useSnackbar } from "@/feedback/useSnackbar";
 
 import type { ApiErrorResponse } from "@/shared/models";
 
@@ -49,6 +53,7 @@ import type { ApiErrorResponse } from "@/shared/models";
  * Component Props
  * ============================================================================
  */
+
 export interface TenantDialogProps {
     /**
      * Controls dialog visibility.
@@ -66,6 +71,7 @@ export interface TenantDialogProps {
  * Tenant Dialog
  * ============================================================================
  */
+
 const TenantDialog = ({
     open,
     onClose,
@@ -75,21 +81,29 @@ const TenantDialog = ({
      * Hooks
      * ------------------------------------------------------------------------
      */
-    const [createTenant, { isLoading }] =
-        useCreateTenantMutation();
 
     /**
-     * ------------------------------------------------------------------------
-     * Local State
-     * ------------------------------------------------------------------------
+     * Tenant creation mutation provided by RTK Query.
      */
-    const [apiError, setApiError] = useState("");
+    const [
+        createTenant,
+        { isLoading },
+    ] = useCreateTenantMutation();
+
+    /**
+     * Global Snackbar notifications.
+     */
+    const {
+        success,
+        error: showError,
+    } = useSnackbar();
 
     /**
      * ------------------------------------------------------------------------
      * Form Configuration
      * ------------------------------------------------------------------------
      */
+
     const {
         control,
         handleSubmit,
@@ -98,7 +112,9 @@ const TenantDialog = ({
             errors,
         },
     } = useForm<CreateTenantFormData>({
-        resolver: zodResolver(createTenantSchema),
+        resolver: zodResolver(
+            createTenantSchema,
+        ),
 
         defaultValues: {
             tenantName: "",
@@ -112,38 +128,86 @@ const TenantDialog = ({
      * Submit Handler
      * ------------------------------------------------------------------------
      */
+
     const onSubmit: SubmitHandler<
         CreateTenantFormData
     > = async (formData) => {
-        setApiError("");
-
         try {
-            await createTenant(formData).unwrap();
+            /**
+             * ------------------------------------------------------------
+             * Create tenant.
+             * ------------------------------------------------------------
+             *
+             * `.unwrap()` causes RTK Query to reject the Promise when
+             * the API request fails.
+             */
+            await createTenant(
+                formData,
+            ).unwrap();
 
+            /**
+             * ------------------------------------------------------------
+             * Reset form after successful creation.
+             * ------------------------------------------------------------
+             */
             reset();
 
+            /**
+             * ------------------------------------------------------------
+             * Show success notification.
+             * ------------------------------------------------------------
+             */
+            success(
+                "Tenant created successfully.",
+            );
+
+            /**
+             * ------------------------------------------------------------
+             * Close the dialog.
+             * ------------------------------------------------------------
+             */
             onClose();
         } catch (error) {
+            /**
+             * ------------------------------------------------------------
+             * Extract backend error message.
+             * ------------------------------------------------------------
+             */
             const apiResponse =
                 error as FetchBaseQueryError & {
                     data?: ApiErrorResponse;
                 };
 
-            setApiError(
+            /**
+             * Use the backend-provided error message when available.
+             */
+            const message =
                 apiResponse.data?.message ??
-                    "Unable to create tenant.",
-            );
+                "Unable to create tenant.";
+
+            /**
+             * ------------------------------------------------------------
+             * Display API error through global Snackbar.
+             * ------------------------------------------------------------
+             */
+            showError(message);
         }
     };
-        /**
+
+    /**
      * ------------------------------------------------------------------------
      * Render
      * ------------------------------------------------------------------------
      */
+
     return (
         <Dialog
             open={open}
-            onClose={onClose}
+            onClose={
+                isLoading
+                    ? undefined
+                    : onClose
+            }
             fullWidth
             maxWidth="sm"
         >
@@ -151,20 +215,15 @@ const TenantDialog = ({
                 Add Tenant
             </DialogTitle>
 
-            <form onSubmit={handleSubmit(onSubmit)} noValidate>
+            <form
+                onSubmit={handleSubmit(onSubmit)}
+                noValidate
+            >
                 <DialogContent>
-                    {apiError && (
-                        <Alert
-                            severity="error"
-                            sx={{ mb: 2 }}
-                        >
-                            {apiError}
-                        </Alert>
-                    )}
-
                     {/* ========================================================
                         Tenant Name
                     ========================================================= */}
+
                     <Controller
                         name="tenantName"
                         control={control}
@@ -174,9 +233,12 @@ const TenantDialog = ({
                                 label="Tenant Name"
                                 fullWidth
                                 margin="normal"
-                                error={Boolean(errors.tenantName)}
+                                error={Boolean(
+                                    errors.tenantName,
+                                )}
                                 helperText={
-                                    errors.tenantName?.message
+                                    errors.tenantName
+                                        ?.message
                                 }
                             />
                         )}
@@ -185,6 +247,7 @@ const TenantDialog = ({
                     {/* ========================================================
                         Apartment Number
                     ========================================================= */}
+
                     <Controller
                         name="apartmentNumber"
                         control={control}
@@ -194,9 +257,13 @@ const TenantDialog = ({
                                 label="Apartment Number"
                                 fullWidth
                                 margin="normal"
-                                error={Boolean(errors.apartmentNumber)}
+                                error={Boolean(
+                                    errors.apartmentNumber,
+                                )}
                                 helperText={
-                                    errors.apartmentNumber?.message
+                                    errors
+                                        .apartmentNumber
+                                        ?.message
                                 }
                             />
                         )}
@@ -205,6 +272,7 @@ const TenantDialog = ({
                     {/* ========================================================
                         Monthly Rent
                     ========================================================= */}
+
                     <Controller
                         name="monthlyRent"
                         control={control}
@@ -215,13 +283,19 @@ const TenantDialog = ({
                                 type="number"
                                 fullWidth
                                 margin="normal"
-                                error={Boolean(errors.monthlyRent)}
+                                error={Boolean(
+                                    errors.monthlyRent,
+                                )}
                                 helperText={
-                                    errors.monthlyRent?.message
+                                    errors.monthlyRent
+                                        ?.message
                                 }
                                 onChange={(event) =>
                                     field.onChange(
-                                        Number(event.target.value),
+                                        Number(
+                                            event.target
+                                                .value,
+                                        ),
                                     )
                                 }
                             />

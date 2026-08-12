@@ -26,6 +26,9 @@
  * This significantly improves readability and maintainability in larger
  * applications.
  *
+ * Since this project uses native ES modules, `import.meta.dirname` is used
+ * instead of the CommonJS `__dirname`.
+ *
  * ============================================================================
  */
 
@@ -39,12 +42,34 @@ import { defineConfig } from "vite";
  * Vite Configuration
  * ============================================================================
  */
-export default defineConfig({
-    plugins: [react()],
 
+export default defineConfig({
+    /**
+     * ------------------------------------------------------------------------
+     * Vite Plugins
+     * ------------------------------------------------------------------------
+     */
+    plugins: [
+        react(),
+    ],
+
+    /**
+     * ------------------------------------------------------------------------
+     * Module Resolution
+     * ------------------------------------------------------------------------
+     *
+     * `@` points to the `src` directory.
+     *
+     * Example:
+     *
+     * import { ROUTES } from "@/shared/constants";
+     */
     resolve: {
         alias: {
-            "@": path.resolve(__dirname, "./src"),
+            "@": path.resolve(
+                import.meta.dirname,
+                "./src",
+            ),
         },
     },
 });

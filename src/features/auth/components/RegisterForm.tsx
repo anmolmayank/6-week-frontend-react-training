@@ -12,27 +12,37 @@
  * - Collect user registration details.
  * - Validate user input.
  * - Create a new application user.
+ * - Display registration success/error feedback.
  * - Notify the parent component when registration succeeds.
+ *
+ * Learning Notes
+ * --------------
+ * - Form validation is handled by React Hook Form + Zod.
+ * - User creation is handled by RTK Query.
+ * - API feedback is handled by the global Snackbar system.
  *
  * ============================================================================
  */
 
-import { useState } from "react";
-
 import { zodResolver } from "@hookform/resolvers/zod";
+
 import {
-    Alert,
     Button,
     Stack,
     TextField,
 } from "@mui/material";
-import { FetchBaseQueryError } from "@reduxjs/toolkit/query";
+
+import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
+
 import {
     useForm,
     type SubmitHandler,
 } from "react-hook-form";
 
 import { useCreateUserMutation } from "@/features/users/api/user.endpoints";
+
+import { useSnackbar } from "@/feedback/useSnackbar";
+
 import type { ApiErrorResponse } from "@/shared/models";
 
 import {
@@ -45,7 +55,14 @@ import {
  * Component Props
  * ============================================================================
  */
+
 interface RegisterFormProps {
+    /**
+     * Called after successful user registration.
+     *
+     * The parent component can use this callback to switch
+     * back to the Login screen.
+     */
     onRegistrationSuccess: () => void;
 }
 
@@ -54,6 +71,7 @@ interface RegisterFormProps {
  * Register Form
  * ============================================================================
  */
+
 const RegisterForm = ({
     onRegistrationSuccess,
 }: RegisterFormProps) => {
@@ -62,21 +80,29 @@ const RegisterForm = ({
      * Hooks
      * ------------------------------------------------------------------------
      */
-    const [createUser, { isLoading }] =
-        useCreateUserMutation();
 
     /**
-     * ------------------------------------------------------------------------
-     * Local State
-     * ------------------------------------------------------------------------
+     * User creation mutation provided by RTK Query.
      */
-    const [apiError, setApiError] = useState("");
+    const [
+        createUser,
+        { isLoading },
+    ] = useCreateUserMutation();
+
+    /**
+     * Global Snackbar notifications.
+     */
+    const {
+        success,
+        error: showError,
+    } = useSnackbar();
 
     /**
      * ------------------------------------------------------------------------
      * Form Configuration
      * ------------------------------------------------------------------------
      */
+
     const {
         register,
         handleSubmit,
@@ -99,52 +125,89 @@ const RegisterForm = ({
      * Submit Handler
      * ------------------------------------------------------------------------
      */
+
     const onSubmit: SubmitHandler<
         RegisterFormData
     > = async (formData) => {
-        setApiError("");
-
         try {
+            /**
+             * ------------------------------------------------------------
+             * Create the user.
+             * ------------------------------------------------------------
+             *
+             * `.unwrap()` converts an unsuccessful RTK Query response
+             * into a rejected Promise so it can be handled by catch().
+             */
             await createUser(formData).unwrap();
 
             /**
-             * Clear form.
+             * ------------------------------------------------------------
+             * Reset the form after successful registration.
+             * ------------------------------------------------------------
              */
             reset();
 
             /**
-             * Switch back to Login screen.
+             * ------------------------------------------------------------
+             * Show success notification.
+             * ------------------------------------------------------------
+             */
+            success(
+                "Registration successful. Please sign in.",
+            );
+
+            /**
+             * ------------------------------------------------------------
+             * Notify the parent component.
+             * ------------------------------------------------------------
+             *
+             * The parent can now switch the UI back to Login.
              */
             onRegistrationSuccess();
         } catch (error) {
+            /**
+             * ------------------------------------------------------------
+             * Extract backend error message.
+             * ------------------------------------------------------------
+             */
             const apiResponse =
                 error as FetchBaseQueryError & {
                     data?: ApiErrorResponse;
                 };
 
-            setApiError(
+            /**
+             * Use the backend-provided message when available.
+             *
+             * Otherwise show a safe generic message.
+             */
+            const message =
                 apiResponse.data?.message ??
-                    "Unable to register user.",
-            );
+                "Unable to register user.";
+
+            /**
+             * ------------------------------------------------------------
+             * Display API error through global Snackbar.
+             * ------------------------------------------------------------
+             */
+            showError(message);
         }
     };
-        /**
+
+    /**
      * ------------------------------------------------------------------------
      * Render
      * ------------------------------------------------------------------------
      */
+
     return (
         <Stack
             component="form"
-            spacing={3}
             onSubmit={handleSubmit(onSubmit)}
-            noValidate
+            spacing={3}
         >
-            {apiError && (
-                <Alert severity="error">
-                    {apiError}
-                </Alert>
-            )}
+            {/* -----------------------------------------------------------------
+                Full Name
+            ------------------------------------------------------------------ */}
 
             <TextField
                 label="Full Name"
@@ -153,6 +216,10 @@ const RegisterForm = ({
                 helperText={errors.name?.message}
                 {...register("name")}
             />
+
+            {/* -----------------------------------------------------------------
+                Email Address
+            ------------------------------------------------------------------ */}
 
             <TextField
                 label="Email Address"
@@ -164,6 +231,10 @@ const RegisterForm = ({
                 {...register("email")}
             />
 
+            {/* -----------------------------------------------------------------
+                Password
+            ------------------------------------------------------------------ */}
+
             <TextField
                 label="Password"
                 type="password"
@@ -173,6 +244,10 @@ const RegisterForm = ({
                 helperText={errors.password?.message}
                 {...register("password")}
             />
+
+            {/* -----------------------------------------------------------------
+                Submit Button
+            ------------------------------------------------------------------ */}
 
             <Button
                 type="submit"

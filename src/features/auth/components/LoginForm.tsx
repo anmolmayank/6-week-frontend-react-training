@@ -12,68 +12,80 @@
  * - Collect user credentials.
  * - Validate user input.
  * - Authenticate the user.
- * - Redirect to the Tenant Dashboard.
+ * - Display authentication success/error feedback.
+ * - Redirect to the Tenant Dashboard after successful login.
  *
  * Learning Notes
  * --------------
- * This component owns the complete login workflow.
- * Authentication token persistence is handled by RTK Query.
+ * - Form validation is handled by React Hook Form + Zod.
+ * - Authentication is handled by RTK Query.
+ * - User feedback is handled by the global Snackbar system.
+ * - Authentication token persistence is handled by RTK Query.
  *
  * ============================================================================
  */
 
-import { useState } from "react";
-
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-    Alert,
-    Button,
-    Stack,
-    TextField,
-} from "@mui/material";
-import { FetchBaseQueryError } from "@reduxjs/toolkit/query";
+
+import { Button, Stack, TextField } from "@mui/material";
+
+import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
+
 import {
     useForm,
     type SubmitHandler,
 } from "react-hook-form";
+
 import { useNavigate } from "react-router-dom";
 
 import { useLoginMutation } from "../api";
+
 import {
     loginSchema,
     type LoginFormData,
 } from "../validation";
 
 import { ROUTES } from "@/shared/constants";
+
 import type { ApiErrorResponse } from "@/shared/models";
+
+import { useSnackbar } from "@/feedback/useSnackbar";
 
 /**
  * ============================================================================
  * Login Form
  * ============================================================================
  */
+
 const LoginForm = () => {
     /**
      * ------------------------------------------------------------------------
      * Hooks
      * ------------------------------------------------------------------------
      */
+
     const navigate = useNavigate();
 
-    const [login, { isLoading }] = useLoginMutation();
+    /**
+     * Global Snackbar notifications.
+     */
+    const {
+        success,
+        error: showError,
+    } = useSnackbar();
 
     /**
-     * ------------------------------------------------------------------------
-     * Local State
-     * ------------------------------------------------------------------------
+     * Login mutation provided by RTK Query.
      */
-    const [apiError, setApiError] = useState("");
+    const [login, { isLoading }] =
+        useLoginMutation();
 
     /**
      * ------------------------------------------------------------------------
      * Form Configuration
      * ------------------------------------------------------------------------
      */
+
     const {
         register,
         handleSubmit,
@@ -94,64 +106,78 @@ const LoginForm = () => {
      * Submit Handler
      * ------------------------------------------------------------------------
      */
-    const onSubmit: SubmitHandler<LoginFormData> = async (
-        formData,
-    ) => {
-        /**
-         * Clear previous API errors.
-         */
-        setApiError("");
 
-        try {
-            /**
-             * Execute login request.
-             */
-            await login(formData).unwrap();
+    const onSubmit: SubmitHandler<LoginFormData> =
+        async (formData) => {
+            try {
+                /**
+                 * ------------------------------------------------------------
+                 * Execute login request.
+                 * ------------------------------------------------------------
+                 *
+                 * `.unwrap()` makes RTK Query throw when the request fails,
+                 * allowing us to handle success and failure using try/catch.
+                 */
+                await login(formData).unwrap();
 
-            /**
-             * Redirect to Tenant Dashboard.
-             */
-            navigate(ROUTES.TENANTS);
-        } catch (error) {
-            /**
-             * Extract backend error message.
-             */
-            const apiResponse =
-                error as FetchBaseQueryError & {
-                    data?: ApiErrorResponse;
-                };
+                /**
+                 * ------------------------------------------------------------
+                 * Show success notification.
+                 * ------------------------------------------------------------
+                 */
+                success("Login successful.");
 
-            setApiError(
-                apiResponse.data?.message ??
-                    "Unable to login. Please try again.",
-            );
-        }
-    };
+                /**
+                 * ------------------------------------------------------------
+                 * Redirect to Tenant Dashboard.
+                 * ------------------------------------------------------------
+                 */
+                navigate(ROUTES.TENANTS);
+            } catch (error) {
+                /**
+                 * ------------------------------------------------------------
+                 * Extract backend error message.
+                 * ------------------------------------------------------------
+                 */
+                const apiResponse =
+                    error as FetchBaseQueryError & {
+                        data?: ApiErrorResponse;
+                    };
 
-        /**
+                /**
+                 * Use the backend-provided message when available.
+                 *
+                 * Otherwise display a safe generic message.
+                 */
+                const message =
+                    apiResponse.data?.message ??
+                    "Unable to login. Please try again.";
+
+                /**
+                 * ------------------------------------------------------------
+                 * Display API error through global Snackbar.
+                 * ------------------------------------------------------------
+                 */
+                showError(message);
+            }
+        };
+
+    /**
      * ------------------------------------------------------------------------
      * Render
      * ------------------------------------------------------------------------
      */
+
     return (
         <Stack
             component="form"
-            spacing={3}
             onSubmit={handleSubmit(onSubmit)}
-            noValidate
+            spacing={3}
         >
-            {/* -----------------------------------------------------------------
-                API Error
-            ------------------------------------------------------------------ */}
-            {apiError && (
-                <Alert severity="error">
-                    {apiError}
-                </Alert>
-            )}
-
             {/* -----------------------------------------------------------------
                 Email Address
             ------------------------------------------------------------------ */}
+
             <TextField
                 label="Email Address"
                 type="email"
@@ -165,6 +191,7 @@ const LoginForm = () => {
             {/* -----------------------------------------------------------------
                 Password
             ------------------------------------------------------------------ */}
+
             <TextField
                 label="Password"
                 type="password"
@@ -178,6 +205,7 @@ const LoginForm = () => {
             {/* -----------------------------------------------------------------
                 Submit Button
             ------------------------------------------------------------------ */}
+
             <Button
                 type="submit"
                 variant="contained"
@@ -185,7 +213,9 @@ const LoginForm = () => {
                 disabled={isLoading}
                 size="large"
             >
-                {isLoading ? "Signing In..." : "Sign In"}
+                {isLoading
+                    ? "Signing In..."
+                    : "Sign In"}
             </Button>
         </Stack>
     );
