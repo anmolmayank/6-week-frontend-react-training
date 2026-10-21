@@ -35,25 +35,19 @@ import {
     TableHead,
     TableRow,
 } from "@mui/material";
-
-import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
-
 import {
     useDeleteAgreementMutation,
     useDownloadAgreementMutation,
     useGetTenantsQuery,
     useUploadAgreementMutation,
 } from "../api";
-
 import type { Tenant } from "../models";
-
 import TenantTableRow from "./TenantTableRow";
-
 import { ConfirmDialog } from "@/feedback/ConfirmDialog";
 import { useSnackbar } from "@/feedback/useSnackbar";
-
-import type { ApiErrorResponse } from "@/shared/models";
-
+import {
+    getApiErrorMessage,
+} from "@/shared/utils";
 /**
  * ============================================================================
  * Component Props
@@ -151,27 +145,6 @@ const TenantTable = ({
 
     /**
      * ------------------------------------------------------------------------
-     * Error Message Helper
-     * ------------------------------------------------------------------------
-     */
-
-    const getErrorMessage = (
-        error: unknown,
-        fallbackMessage: string,
-    ) => {
-        const apiResponse =
-            error as FetchBaseQueryError & {
-                data?: ApiErrorResponse;
-            };
-
-        return (
-            apiResponse.data?.message ??
-            fallbackMessage
-        );
-    };
-
-    /**
-     * ------------------------------------------------------------------------
      * Upload Agreement
      * ------------------------------------------------------------------------
      */
@@ -191,10 +164,10 @@ const TenantTable = ({
             );
         } catch (error) {
             showError(
-                getErrorMessage(
-                    error,
-                    "Unable to upload rental agreement.",
-                ),
+            getApiErrorMessage(
+                error,
+                "Unable to upload rental agreement.",
+            )
             );
         }
     };
@@ -220,7 +193,7 @@ const TenantTable = ({
             );
         } catch (error) {
             showError(
-                getErrorMessage(
+                getApiErrorMessage(
                     error,
                     "Unable to replace rental agreement.",
                 ),
@@ -275,7 +248,7 @@ const TenantTable = ({
             setTenantToDelete(null);
         } catch (error) {
             showError(
-                getErrorMessage(
+                getApiErrorMessage(
                     error,
                     "Unable to delete rental agreement.",
                 ),
@@ -321,7 +294,7 @@ const TenantTable = ({
             );
         } catch (error) {
             showError(
-                getErrorMessage(
+                getApiErrorMessage(
                     error,
                     "Unable to download rental agreement.",
                 ),

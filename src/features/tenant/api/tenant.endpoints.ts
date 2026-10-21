@@ -22,11 +22,11 @@
 import { baseApi } from "@/app/api/baseApi";
 
 import type {
-    CreateTenantRequest,
-    CreateTenantResponse,
-    GetTenantsResponse,
-    UpdateTenantRequest,
-    UpdateTenantResponse,
+  CreateTenantRequest,
+  CreateTenantResponse,
+  GetTenantsResponse,
+  UpdateTenantRequest,
+  UpdateTenantResponse,
 } from "../models";
 
 /**
@@ -35,153 +35,221 @@ import type {
  * ============================================================================
  */
 
-export const tenantApi =
-    baseApi.injectEndpoints({
-        endpoints: (builder) => ({
-            /**
-             * --------------------------------------------------------------
-             * Get Tenants
-             * --------------------------------------------------------------
-             */
-            getTenants:
-                builder.query<
-                    GetTenantsResponse,
-                    void
-                >({
-                    query: () => ({
-                        url: "/tenants",
-                        method: "GET",
-                    }),
+export const tenantApi = baseApi.injectEndpoints({
+  endpoints: (builder) => ({
+    /**
+     * --------------------------------------------------------------
+     * Get Tenants
+     * --------------------------------------------------------------
+     */
+    getTenants: builder.query<GetTenantsResponse, void>({
+      query: () => ({
+        url: "/tenants",
+        method: "GET",
+      }),
 
-                    providesTags: ["Tenant"],
-                }),
+      /**
+       * Provide:
+       *
+       * Tenant list tag
+       * Individual tenant tags
+       */
+      providesTags: (result) => {
+        if (!result) {
+          return [
+            {
+              type: "Tenant",
+              id: "LIST",
+            },
+          ];
+        }
 
-            /**
-             * --------------------------------------------------------------
-             * Create Tenant
-             * --------------------------------------------------------------
-             */
-            createTenant:
-                builder.mutation<
-                    CreateTenantResponse,
-                    CreateTenantRequest
-                >({
-                    query: (body) => ({
-                        url: "/tenants",
-                        method: "POST",
-                        body,
-                    }),
+        return [
+          {
+            type: "Tenant",
+            id: "LIST",
+          },
 
-                    invalidatesTags: [
-                        "Tenant",
-                    ],
-                }),
+          ...result.data.map((tenant) => ({
+            type: "Tenant" as const,
+            id: tenant._id,
+          })),
+        ];
+      },
+    }),
 
-            /**
-             * --------------------------------------------------------------
-             * Update Tenant
-             * --------------------------------------------------------------
-             */
-            updateTenant:
-                builder.mutation<
-                    UpdateTenantResponse,
-                    {
-                        tenantId: string;
-                        body: UpdateTenantRequest;
-                    }
-                >({
-                    query: ({
-                        tenantId,
-                        body,
-                    }) => ({
-                        url: `/tenants/${tenantId}`,
-                        method: "PATCH",
-                        body,
-                    }),
+    /**
+     * --------------------------------------------------------------
+     * Create Tenant
+     * --------------------------------------------------------------
+     */
+    createTenant: builder.mutation<CreateTenantResponse, CreateTenantRequest>({
+      query: (body) => ({
+        url: "/tenants",
+        method: "POST",
+        body,
+      }),
 
-                    invalidatesTags: [
-                        "Tenant",
-                    ],
-                }),
+      /**
+       * Creating a tenant changes
+       * the tenant list.
+       */
+      invalidatesTags: [
+        {
+          type: "Tenant",
+          id: "LIST",
+        },
+      ],
+    }),
+    /**
+     * --------------------------------------------------------------
+     * Update Tenant
+     * --------------------------------------------------------------
+     */
+    updateTenant: builder.mutation<
+      UpdateTenantResponse,
+      {
+        tenantId: string;
+        body: UpdateTenantRequest;
+      }
+    >({
+      query: ({ tenantId, body }) => ({
+        url: `/tenants/${tenantId}`,
+        method: "PATCH",
+        body,
+      }),
 
-            /**
-             * --------------------------------------------------------------
-             * Upload Rental Agreement
-             * --------------------------------------------------------------
-             */
-            uploadAgreement:
-                builder.mutation<
-                    void,
-                    {
-                        tenantId: string;
-                        file: File;
-                    }
-                >({
-                    query: ({
-                        tenantId,
-                        file,
-                    }) => {
-                        const formData =
-                            new FormData();
+      /**
+       * ----------------------------------------------------------
+       * Optimistic Cache Update
+       * ----------------------------------------------------------
+       *
+       * Update the cached tenant list immediately instead of
+       * waiting for the PATCH request to complete.
+       */
+      async onQueryStarted({ tenantId, body }, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          tenantApi.util.updateQueryData("getTenants", undefined, (draft) => {
+            const tenant = draft.data.find((item) => item._id === tenantId);
 
-                        formData.append(
-                            "agreement",
-                            file,
-                        );
-
-                        return {
-                            url: `/tenants/${tenantId}/agreement`,
-                            method: "POST",
-                            body: formData,
-                        };
-                    },
-
-                    invalidatesTags: [
-                        "Tenant",
-                    ],
-                }),
+            if (!tenant) {
+              return;
+            }
 
             /**
-             * --------------------------------------------------------------
-             * Download Rental Agreement
-             * --------------------------------------------------------------
+             * Update only the fields
+             * supplied by the PATCH request.
              */
-            downloadAgreement:
-                builder.mutation<
-                    Blob,
-                    string
-                >({
-                    query: (tenantId) => ({
-                        url: `/tenants/${tenantId}/agreement`,
-                        method: "GET",
+            Object.assign(tenant, body);
+          }),
+        );
 
-                        responseHandler:
-                            (response) =>
-                                response.blob(),
-                    }),
-                }),
+        try {
+          /**
+           * Wait for the backend request.
+           */
+          await queryFulfilled;
+        } catch {
+          /**
+           * Backend request failed.
+           *
+           * Roll back the optimistic
+           * cache update.
+           */
+          patchResult.undo();
+        }
+      },
 
-            /**
-             * --------------------------------------------------------------
-             * Delete Rental Agreement
-             * --------------------------------------------------------------
-             */
-            deleteAgreement:
-                builder.mutation<
-                    void,
-                    string
-                >({
-                    query: (tenantId) => ({
-                        url: `/tenants/${tenantId}/agreement`,
-                        method: "DELETE",
-                    }),
+      /**
+       * ----------------------------------------------------------
+       * Cache Invalidation
+       * ----------------------------------------------------------
+       *
+       * Keep the affected tenant cache synchronized with the
+       * server after the mutation.
+       */
+      invalidatesTags: (_result, _error, { tenantId }) => [
+        {
+          type: "Tenant",
+          id: tenantId,
+        },
+      ],
+    }),
 
-                    invalidatesTags: [
-                        "Tenant",
-                    ],
-                }),
-        }),
-    });
+    /**
+     * --------------------------------------------------------------
+     * Upload Rental Agreement
+     * --------------------------------------------------------------
+     */
+    uploadAgreement: builder.mutation<
+      void,
+      {
+        tenantId: string;
+        file: File;
+      }
+    >({
+      query: ({ tenantId, file }) => {
+        const formData = new FormData();
+
+        formData.append("agreement", file);
+
+        return {
+          url: `/tenants/${tenantId}/agreement`,
+          method: "POST",
+          body: formData,
+        };
+      },
+
+      /**
+       * Only the affected tenant
+       * needs to be refreshed.
+       */
+      invalidatesTags: (_result, _error, { tenantId }) => [
+        {
+          type: "Tenant",
+          id: tenantId,
+        },
+      ],
+    }),
+
+    /**
+     * --------------------------------------------------------------
+     * Download Rental Agreement
+     * --------------------------------------------------------------
+     */
+    downloadAgreement: builder.mutation<Blob, string>({
+      query: (tenantId) => ({
+        url: `/tenants/${tenantId}/agreement`,
+        method: "GET",
+
+        responseHandler: (response) => response.blob(),
+      }),
+    }),
+
+    /**
+     * --------------------------------------------------------------
+     * Delete Rental Agreement
+     * --------------------------------------------------------------
+     */
+    deleteAgreement: builder.mutation<void, string>({
+      query: (tenantId) => ({
+        url: `/tenants/${tenantId}/agreement`,
+        method: "DELETE",
+      }),
+
+      /**
+       * Only the affected tenant
+       * needs to be refreshed.
+       */
+      invalidatesTags: (_result, _error, tenantId) => [
+        {
+          type: "Tenant",
+          id: tenantId,
+        },
+      ],
+    }),
+  }),
+});
 
 /**
  * ============================================================================
@@ -190,10 +258,10 @@ export const tenantApi =
  */
 
 export const {
-    useGetTenantsQuery,
-    useCreateTenantMutation,
-    useUpdateTenantMutation,
-    useUploadAgreementMutation,
-    useDownloadAgreementMutation,
-    useDeleteAgreementMutation,
+  useGetTenantsQuery,
+  useCreateTenantMutation,
+  useUpdateTenantMutation,
+  useUploadAgreementMutation,
+  useDownloadAgreementMutation,
+  useDeleteAgreementMutation,
 } = tenantApi;
