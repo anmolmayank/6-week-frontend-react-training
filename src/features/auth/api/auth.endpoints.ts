@@ -1,3 +1,4 @@
+
 /**
  * ============================================================================
  * Authentication API Endpoints
@@ -9,13 +10,14 @@
  *
  * Responsibilities
  * ----------------
- * - User login.
- * - Persist JWT access token after successful login.
+ * - Authenticate users through the login endpoint.
+ * - Persist the access token after successful login.
+ * - Notify the application when authentication changes.
  *
  * Learning Notes
  * --------------
- * Registration is handled by the User feature because it creates
- * a new application user.
+ * RTK Query remains responsible for the login request lifecycle.
+ * Session utilities synchronize UI visibility with token changes.
  *
  * ============================================================================
  */
@@ -23,9 +25,11 @@
 import { baseApi } from "@/app/api/baseApi";
 import { STORAGE_KEYS } from "@/shared/constants";
 
+import { notifyAuthSessionChanged } from "../utils/authSession";
+
 import type {
-    LoginRequest,
-    LoginResponse,
+  LoginRequest,
+  LoginResponse,
 } from "../models";
 
 /**
@@ -34,42 +38,48 @@ import type {
  * ============================================================================
  */
 export const authApi = baseApi.injectEndpoints({
-    endpoints: (builder) => ({
-        /**
-         * --------------------------------------------------------------------
-         * Login
-         * --------------------------------------------------------------------
-         */
-        login: builder.mutation<LoginResponse, LoginRequest>({
-            query: (body) => ({
-                url: "/auth/login",
-                method: "POST",
-                body,
-            }),
+  endpoints: (builder) => ({
+    /**
+     * ------------------------------------------------------------------------
+     * Login
+     * ------------------------------------------------------------------------
+     *
+     * Persists the access token only after the login request succeeds.
+     */
+    login: builder.mutation<LoginResponse, LoginRequest>({
+      query: (body) => ({
+        url: "/auth/login",
+        method: "POST",
+        body,
+      }),
 
-            /**
-             * ----------------------------------------------------------------
-             * Persist Access Token
-             * ----------------------------------------------------------------
-             */
-            async onQueryStarted(_, { queryFulfilled }) {
-                try {
-                    const { data } = await queryFulfilled;
+      /**
+       * ----------------------------------------------------------------------
+       * Persist Access Token
+       * ----------------------------------------------------------------------
+       */
+      async onQueryStarted(_, { queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
 
-                    localStorage.setItem(
-                        STORAGE_KEYS.ACCESS_TOKEN,
-                        data.data.accessToken
-                    );
-                } catch {
-                    /**
-                     * Errors are handled by RTK Query.
-                     */
-                }
-            },
+          localStorage.setItem(
+            STORAGE_KEYS.ACCESS_TOKEN,
+            data.data.accessToken,
+          );
 
-            invalidatesTags: ["Auth"],
-        }),
+          // Make the new session visible to subscribed UI components.
+          notifyAuthSessionChanged();
+        } catch {
+          /**
+           * Login errors remain available through the RTK Query mutation
+           * result and are handled by the login form.
+           */
+        }
+      },
+
+      invalidatesTags: ["Auth"],
     }),
+  }),
 });
 
 /**
@@ -78,5 +88,5 @@ export const authApi = baseApi.injectEndpoints({
  * ============================================================================
  */
 export const {
-    useLoginMutation,
+  useLoginMutation,
 } = authApi;
