@@ -1,3 +1,4 @@
+
 /**
  * ============================================================================
  * Application Root
@@ -10,21 +11,24 @@
  * Responsibilities
  * ----------------
  * - Registers global UI providers.
- * - Renders the application.
+ * - Configures browser-based routing.
+ * - Renders application routes.
+ * - Mounts the global floating AI chat widget.
  *
  * Learning Notes
  * --------------
- * Global providers are added here progressively as the application grows.
+ * Global application-level UI belongs here when it must remain mounted
+ * across route changes.
  *
  * ============================================================================
  */
 
 import { CssBaseline, ThemeProvider } from "@mui/material";
-
-import { theme } from "@/theme";
 import { BrowserRouter } from "react-router-dom";
 
+import { theme } from "@/theme";
 import { AppRoutes } from "@/routes";
+import { ChatWidget } from "@/features/chat/components";
 
 /**
  * ============================================================================
@@ -32,14 +36,19 @@ import { AppRoutes } from "@/routes";
  * ============================================================================
  */
 const App = () => {
-    return (
-        <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <BrowserRouter>
-                <AppRoutes />
-            </BrowserRouter> 
-        </ThemeProvider>
-    );
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+
+      <BrowserRouter>
+        {/* Application route configuration */}
+        <AppRoutes />
+
+        {/* Global floating AI assistant */}
+        <ChatWidget />
+      </BrowserRouter>
+    </ThemeProvider>
+  );
 };
 
 export default App;
