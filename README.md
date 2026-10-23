@@ -11,7 +11,7 @@ Currently, two official plugins are available:
 
 The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
 
-Note: This will impact Vite dev & build performances.
+Note: This will impact Vite dev & build performance.
 
 ## Expanding the ESLint configuration
 
@@ -1083,5 +1083,3 @@ This frontend demonstrates the practical use of:
 - Local AI integration using Node.js, FastAPI, and Ollama.
 
 ---
-
-**Documentation note:** This README consolidates the uploaded frontend README and the implementation details recorded in the conversation. It has not been verified against a live checkout of the current frontend branch. Confirm the file tree, chat request schema, response types, and implementation status before treating proposed paths or planned behavior as the definitive repository state.
