@@ -23,7 +23,8 @@
 
 import { useState } from "react";
 
-import { Box, Link, Paper, Stack, Typography } from "@mui/material";
+import { Avatar, Box, Link, Paper, Stack, Typography } from "@mui/material";
+import ApartmentRoundedIcon from "@mui/icons-material/ApartmentRounded";
 import LoginForm from "./components/LoginForm";
 import RegisterForm from "./components/RegisterForm";
 
@@ -65,38 +66,45 @@ const AuthPage = () => {
           flex: 1,
           flexDirection: "column",
           justifyContent: "center",
-          bgcolor: "primary.main",
+          background: "linear-gradient(145deg, #102B46 0%, #163F62 62%, #1769AA 100%)",
           color: "common.white",
           p: 8,
         }}
       >
-        <Typography
-          variant="h3"
-          gutterBottom
-          sx={{
-            fontWeight: 700,
-          }}
-        >
-          Tenant Management
-        </Typography>
+        <Stack direction="row" spacing={1.5} sx={{ mb: 4, alignItems: "center" }}>
+          <Avatar variant="rounded" sx={{ width: 52, height: 52, bgcolor: "rgba(255,255,255,0.12)", color: "#8BC7FF", border: "1px solid rgba(255,255,255,0.16)" }}>
+            <ApartmentRoundedIcon fontSize="large" />
+          </Avatar>
+          <Box>
+            <Typography variant="h3" sx={{ fontWeight: 800, letterSpacing: -1.5, fontSize: 36 }}>
+              EstateFlow
+            </Typography>
+            <Typography sx={{ color: "#B7CBE0", fontSize: 13 }}>Property Management</Typography>
+          </Box>
+        </Stack>
 
         <Typography
-          variant="h6"
+          variant="h4"
+          gutterBottom
           sx={{
-            mb: 4,
+            fontWeight: 750,
+            maxWidth: 470,
+            lineHeight: 1.2,
+            letterSpacing: -0.8,
           }}
         >
-          Modern Rental Management Platform
+          A better way to manage your rental property.
+        </Typography>
+
+        <Typography sx={{ color: "#C5D4E3", maxWidth: 440, mb: 4, mt: 1, lineHeight: 1.8 }}>
+          One workspace for property owners and a simple, secure portal for tenants.
         </Typography>
 
         <Stack spacing={2}>
-          <Typography>✓ Secure Authentication</Typography>
-
-          <Typography>✓ Tenant Records</Typography>
-
-          <Typography>✓ Rental Agreement Management</Typography>
-
-          <Typography>✓ PDF Document Storage</Typography>
+          <Typography sx={{ color: "#E3EDF7" }}>✓ Tenant and rental agreement management</Typography>
+          <Typography sx={{ color: "#E3EDF7" }}>✓ Role-based owner and tenant experiences</Typography>
+          <Typography sx={{ color: "#E3EDF7" }}>✓ Maintenance requests and status tracking</Typography>
+          <Typography sx={{ color: "#E3EDF7" }}>✓ Local AI assistant for help and guidance</Typography>
         </Stack>
       </Box>
 
@@ -119,6 +127,8 @@ const AuthPage = () => {
             maxWidth: 440,
             p: 5,
             borderRadius: 3,
+            border: "1px solid #E7ECF2",
+            boxShadow: "0 16px 50px rgba(20, 40, 68, 0.10)",
           }}
         >
           <Stack spacing={3}>
@@ -132,10 +142,10 @@ const AuthPage = () => {
                 {isLoginMode ? "Welcome Back" : "Create Account"}
               </Typography>
 
-              <Typography color="text.secondary">
+              <Typography sx={{ color: "text.secondary" }}>
                 {isLoginMode
                   ? "Sign in to continue."
-                  : "Create an account to continue."}
+                  : "Create a tenant account. The property owner will link it to your tenancy."}
               </Typography>
             </Box>
             {isLoginMode ? (

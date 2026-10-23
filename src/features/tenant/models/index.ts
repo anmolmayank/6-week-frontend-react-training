@@ -11,5 +11,7 @@ export type {
     CreateTenantRequest,
     CreateTenantResponse,
     UpdateTenantRequest,
-    UpdateTenantResponse
+    UpdateTenantResponse,
+    TenantSelfProfile,
+    TenantSelfAgreement
 } from "./tenant.models";

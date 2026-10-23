@@ -1,56 +1,33 @@
-/**
- * ============================================================================
- * User API Endpoints
- * ============================================================================
- *
- * Purpose
- * -------
- * Registers user-related API endpoints.
- *
- * Responsibilities
- * ----------------
- * - Create user.
- *
- * ============================================================================
- */
-
+/** RTK Query endpoints for public registration and owner-managed user accounts. */
 import { baseApi } from "@/app/api/baseApi";
-
 import type {
-    CreateUserRequest,
-    CreateUserResponse,
+  CreateUserRequest,
+  CreateUserResponse,
+  GetUsersResponse,
+  UpdateUserRequest,
+  UpdateUserResponse,
 } from "../models";
 
-/**
- * ============================================================================
- * User Endpoints
- * ============================================================================
- */
 export const userApi = baseApi.injectEndpoints({
-    endpoints: (builder) => ({
-        /**
-         * --------------------------------------------------------------------
-         * Create User
-         * --------------------------------------------------------------------
-         */
-        createUser: builder.mutation<
-            CreateUserResponse,
-            CreateUserRequest
-        >({
-            query: (body) => ({
-                url: "/users",
-                method: "POST",
-                body,
-            }),
-        }),
+  endpoints: (builder) => ({
+    createUser: builder.mutation<CreateUserResponse, CreateUserRequest>({
+      query: (body) => ({ url: "/users", method: "POST", body }),
     }),
+
+    getUsers: builder.query<GetUsersResponse, void>({
+      query: () => ({ url: "/users", method: "GET" }),
+      providesTags: ["User"],
+    }),
+
+    updateUser: builder.mutation<UpdateUserResponse, { id: string; body: UpdateUserRequest }>({
+      query: ({ id, body }) => ({ url: `/users/${id}`, method: "PATCH", body }),
+      invalidatesTags: ["User", "Auth"],
+    }),
+  }),
 });
 
-/**
- * ============================================================================
- * RTK Query Hooks
- * ============================================================================
- */
 export const {
-    useCreateUserMutation,
+  useCreateUserMutation,
+  useGetUsersQuery,
+  useUpdateUserMutation,
 } = userApi;

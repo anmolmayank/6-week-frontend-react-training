@@ -348,7 +348,7 @@ export default function ChatPage({
           <Box>
             <Typography variant="h6">AI Assistant</Typography>
 
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{ color: "text.secondary" }}>
               Powered by your local Ollama model
             </Typography>
           </Box>
@@ -455,7 +455,7 @@ export default function ChatPage({
             >
               <CircularProgress size={20} />
 
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
                 Generating response…
               </Typography>
             </Box>

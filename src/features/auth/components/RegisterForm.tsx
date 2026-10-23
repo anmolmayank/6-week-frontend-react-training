@@ -153,7 +153,7 @@ const RegisterForm = ({
              * ------------------------------------------------------------
              */
             success(
-                "Registration successful. Please sign in.",
+                "Account created. Please sign in; the property owner must link your account to your tenant record before tenant services are available.",
             );
 
             /**

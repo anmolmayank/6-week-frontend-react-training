@@ -1,4 +1,1 @@
-export {
-    authApi,
-    useLoginMutation,
-} from "./auth.endpoints";
+export { authApi, useLoginMutation, useGetCurrentUserQuery } from "./auth.endpoints";

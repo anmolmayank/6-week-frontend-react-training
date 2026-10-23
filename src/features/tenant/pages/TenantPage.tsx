@@ -26,6 +26,7 @@ import {
     Button,
     Typography,
 } from "@mui/material";
+import PersonAddAlt1RoundedIcon from "@mui/icons-material/PersonAddAlt1Rounded";
 
 import TenantDialog from "../components/TenantDialog";
 import TenantTable from "../components/TenantTable";
@@ -137,16 +138,16 @@ const TenantPage = () => {
                             Tenant Management
                         </Typography>
 
-                        <Typography color="text.secondary">
-                            Manage tenant records and rental agreements.
+                        <Typography sx={{ mt: 0.5, fontSize: 13.5, color: "text.secondary" }}>
+                            Manage tenant records and rental agreements in one place.
                         </Typography>
                     </Box>
 
                     <Button
                         variant="contained"
-                        onClick={
-                            handleOpenCreateDialog
-                        }
+                        startIcon={<PersonAddAlt1RoundedIcon />}
+                        onClick={handleOpenCreateDialog}
+                        sx={{ boxShadow: "none", alignSelf: { xs: "flex-start", sm: "auto" } }}
                     >
                         Add Tenant
                     </Button>
@@ -167,20 +168,14 @@ const TenantPage = () => {
                 Tenant Dialog
             ================================================================= */}
 
-            <TenantDialog
-                open={isDialogOpen}
-                onClose={
-                    handleCloseDialog
-                }
-                mode={
-                    selectedTenant
-                        ? "edit"
-                        : "create"
-                }
-                tenant={
-                    selectedTenant
-                }
-            />
+            {isDialogOpen && (
+                <TenantDialog
+                    open={isDialogOpen}
+                    onClose={handleCloseDialog}
+                    mode={selectedTenant ? "edit" : "create"}
+                    tenant={selectedTenant}
+                />
+            )}
         </>
     );
 };

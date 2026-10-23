@@ -13,7 +13,7 @@
  * - Validate user input.
  * - Authenticate the user.
  * - Display authentication success/error feedback.
- * - Redirect to the Tenant Dashboard after successful login.
+ * - Redirect to the dashboard appropriate to the authenticated user role.
  *
  * Learning Notes
  * --------------
@@ -45,7 +45,7 @@ import {
     type LoginFormData,
 } from "../validation";
 
-import { ROUTES } from "@/shared/constants";
+import { getHomeRouteForRole } from "../utils/authSession";
 
 import type { ApiErrorResponse } from "@/shared/models";
 
@@ -118,7 +118,7 @@ const LoginForm = () => {
                  * `.unwrap()` makes RTK Query throw when the request fails,
                  * allowing us to handle success and failure using try/catch.
                  */
-                await login(formData).unwrap();
+                const response = await login(formData).unwrap();
 
                 /**
                  * ------------------------------------------------------------
@@ -132,7 +132,7 @@ const LoginForm = () => {
                  * Redirect to Tenant Dashboard.
                  * ------------------------------------------------------------
                  */
-                navigate(ROUTES.TENANTS);
+                void navigate(getHomeRouteForRole(response.data.user.role));
             } catch (error) {
                 /**
                  * ------------------------------------------------------------

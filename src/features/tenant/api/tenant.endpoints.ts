@@ -12,6 +12,7 @@
  * - Get tenants.
  * - Create tenant.
  * - Update tenant.
+ * - Delete tenant.
  * - Upload rental agreement.
  * - Download rental agreement.
  * - Delete rental agreement.
@@ -27,7 +28,9 @@ import type {
   GetTenantsResponse,
   UpdateTenantRequest,
   UpdateTenantResponse,
+  TenantSelfProfile,
 } from "../models";
+import type { ApiResponse } from "@/shared/models";
 
 /**
  * ============================================================================
@@ -37,6 +40,21 @@ import type {
 
 export const tenantApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
+    /** Tenant-scoped profile: identity comes from the authenticated session. */
+    getMyTenant: builder.query<ApiResponse<TenantSelfProfile>, void>({
+      query: () => ({ url: "/tenants/me", method: "GET" }),
+      providesTags: [{ type: "Tenant", id: "ME" }],
+    }),
+
+    /** Downloads only the agreement linked to the authenticated tenant. */
+    downloadMyAgreement: builder.mutation<Blob, void>({
+      query: () => ({
+        url: "/tenants/me/agreement",
+        method: "GET",
+        responseHandler: (response) => response.blob(),
+      }),
+    }),
+
     /**
      * --------------------------------------------------------------
      * Get Tenants
@@ -178,6 +196,26 @@ export const tenantApi = baseApi.injectEndpoints({
 
     /**
      * --------------------------------------------------------------
+     * Delete Tenant
+     * --------------------------------------------------------------
+     *
+     * Expects the backend to expose DELETE /api/v1/tenants/:tenantId.
+     * The Node route must enforce owner authorization and handle linked
+     * agreement/file cleanup according to the backend's retention rules.
+     */
+    deleteTenant: builder.mutation<void, string>({
+      query: (tenantId) => ({
+        url: `/tenants/${tenantId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, tenantId) => [
+        { type: "Tenant", id: "LIST" },
+        { type: "Tenant", id: tenantId },
+      ],
+    }),
+
+    /**
+     * --------------------------------------------------------------
      * Upload Rental Agreement
      * --------------------------------------------------------------
      */
@@ -209,6 +247,7 @@ export const tenantApi = baseApi.injectEndpoints({
           type: "Tenant",
           id: tenantId,
         },
+        { type: "Tenant", id: "ME" },
       ],
     }),
 
@@ -246,6 +285,7 @@ export const tenantApi = baseApi.injectEndpoints({
           type: "Tenant",
           id: tenantId,
         },
+        { type: "Tenant", id: "ME" },
       ],
     }),
   }),
@@ -259,8 +299,11 @@ export const tenantApi = baseApi.injectEndpoints({
 
 export const {
   useGetTenantsQuery,
+  useGetMyTenantQuery,
+  useDownloadMyAgreementMutation,
   useCreateTenantMutation,
   useUpdateTenantMutation,
+  useDeleteTenantMutation,
   useUploadAgreementMutation,
   useDownloadAgreementMutation,
   useDeleteAgreementMutation,

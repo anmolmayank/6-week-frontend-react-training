@@ -1,8 +1,9 @@
 export type {
-    AuthUser,
-    LoginRequest,
-    LoginResponse,
-    LoginResponseData,
-    RegisterRequest,
-    RegisterResponse,
+  LoginRequest,
+  RegisterRequest,
+  UserRole,
+  AuthUser,
+  LoginResponseData,
+  LoginResponse,
+  RegisterResponse,
 } from "./auth.models";

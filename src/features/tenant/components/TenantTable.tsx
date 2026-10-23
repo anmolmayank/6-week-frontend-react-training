@@ -16,6 +16,7 @@
  * - Replace rental agreements.
  * - Delete rental agreements.
  * - Download rental agreements.
+ * - Request tenant deletion with confirmation.
  * - Confirm destructive actions.
  * - Display user feedback through the global Snackbar.
  *
@@ -34,9 +35,14 @@ import {
     TableContainer,
     TableHead,
     TableRow,
+    TextField,
+    InputAdornment,
+    Typography,
 } from "@mui/material";
+import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import {
     useDeleteAgreementMutation,
+    useDeleteTenantMutation,
     useDownloadAgreementMutation,
     useGetTenantsQuery,
     useUploadAgreementMutation,
@@ -76,16 +82,17 @@ const TenantTable = ({
      * ------------------------------------------------------------------------
      */
 
-    /**
-     * Stores the tenant ID whose rental agreement is awaiting deletion
-     * confirmation.
-     *
-     * `null` means no deletion is currently awaiting confirmation.
-     */
+    /** Stores the tenant ID whose rental agreement is awaiting deletion confirmation. */
     const [
-        tenantToDelete,
-        setTenantToDelete,
+        agreementTenantToDelete,
+        setAgreementTenantToDelete,
     ] = useState<string | null>(null);
+
+    /** Tenant record awaiting confirmation for permanent removal. */
+    const [tenantToDelete, setTenantToDelete] = useState<Tenant | null>(null);
+
+    /** Client-side search across tenant name and apartment number. */
+    const [searchTerm, setSearchTerm] = useState("");
 
     /**
      * ------------------------------------------------------------------------
@@ -139,9 +146,16 @@ const TenantTable = ({
     const [
         deleteAgreement,
         {
-            isLoading: isDeleting,
+            isLoading: isDeletingAgreement,
         },
     ] = useDeleteAgreementMutation();
+
+    const [
+        deleteTenant,
+        {
+            isLoading: isDeletingTenant,
+        },
+    ] = useDeleteTenantMutation();
 
     /**
      * ------------------------------------------------------------------------
@@ -164,10 +178,10 @@ const TenantTable = ({
             );
         } catch (error) {
             showError(
-            getApiErrorMessage(
-                error,
-                "Unable to upload rental agreement.",
-            )
+                getApiErrorMessage(
+                    error,
+                    "Unable to upload rental agreement.",
+                ),
             );
         }
     };
@@ -210,7 +224,7 @@ const TenantTable = ({
     const handleDeleteRequest = (
         tenantId: string,
     ) => {
-        setTenantToDelete(
+        setAgreementTenantToDelete(
             tenantId,
         );
     };
@@ -222,35 +236,56 @@ const TenantTable = ({
      */
 
     const handleCancelDelete = () => {
-        setTenantToDelete(null);
+        setAgreementTenantToDelete(null);
     };
 
     /**
      * ------------------------------------------------------------------------
-     * Confirm Delete
+     * Confirm Agreement Delete
      * ------------------------------------------------------------------------
      */
 
-    const handleConfirmDelete = async () => {
+    const handleConfirmDeleteAgreement = async () => {
+        if (!agreementTenantToDelete) {
+            return;
+        }
+
+        try {
+            await deleteAgreement(agreementTenantToDelete).unwrap();
+            success("Rental agreement deleted successfully.");
+            setAgreementTenantToDelete(null);
+        } catch (error) {
+            showError(
+                getApiErrorMessage(error, "Unable to delete rental agreement."),
+            );
+        }
+    };
+
+    /** Request confirmation before removing the tenant record. */
+    const handleDeleteTenantRequest = (tenant: Tenant) => {
+        setTenantToDelete(tenant);
+    };
+
+    const handleCancelDeleteTenant = () => {
+        if (!isDeletingTenant) {
+            setTenantToDelete(null);
+        }
+    };
+
+    const handleConfirmDeleteTenant = async () => {
         if (!tenantToDelete) {
             return;
         }
 
         try {
-            await deleteAgreement(
-                tenantToDelete,
-            ).unwrap();
-
-            success(
-                "Rental agreement deleted successfully.",
-            );
-
+            await deleteTenant(tenantToDelete._id).unwrap();
+            success(`Tenant ${tenantToDelete.tenantName} deleted successfully.`);
             setTenantToDelete(null);
         } catch (error) {
             showError(
                 getApiErrorMessage(
                     error,
-                    "Unable to delete rental agreement.",
+                    "Unable to delete tenant. Ensure the backend exposes DELETE /api/v1/tenants/:tenantId.",
                 ),
             );
         }
@@ -355,113 +390,127 @@ const TenantTable = ({
 
     /**
      * ------------------------------------------------------------------------
+     * Filter Tenant Rows
+     * ------------------------------------------------------------------------
+     */
+    const tenants = data?.data ?? [];
+    const normalizedSearch = searchTerm.trim().toLocaleLowerCase();
+    const filteredTenants = tenants.filter((tenant) =>
+        tenant.tenantName.toLocaleLowerCase().includes(normalizedSearch)
+        || tenant.apartmentNumber.toLocaleLowerCase().includes(normalizedSearch),
+    );
+
+    /**
+     * ------------------------------------------------------------------------
      * Render
      * ------------------------------------------------------------------------
      */
-
     return (
         <>
-            <TableContainer
-                component={Paper}
-            >
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>
-                                Tenant
-                            </TableCell>
-
-                            <TableCell>
-                                Apartment
-                            </TableCell>
-
-                            <TableCell align="right">
-                                Monthly Rent
-                            </TableCell>
-
-                            <TableCell>
-                                Agreement
-                            </TableCell>
-
-                            <TableCell align="center">
-                                Actions
-                            </TableCell>
-                        </TableRow>
-                    </TableHead>
-
-                    <TableBody>
-                        {data.data.map(
-                            (tenant) => (
-                                <TenantTableRow
-                                    key={
-                                        tenant._id
-                                    }
-                                    tenant={
-                                        tenant
-                                    }
-                                    onEdit={() =>
-                                        onEdit(
-                                            tenant,
-                                        )
-                                    }
-                                    onUpload={(
-                                        file,
-                                    ) =>
-                                        handleUpload(
-                                            tenant._id,
-                                            file,
-                                        )
-                                    }
-                                    onReplace={(
-                                        file,
-                                    ) =>
-                                        handleReplace(
-                                            tenant._id,
-                                            file,
-                                        )
-                                    }
-                                    onDelete={() =>
-                                        handleDeleteRequest(
-                                            tenant._id,
-                                        )
-                                    }
-                                    onDownload={() =>
-                                        handleDownload(
-                                            tenant._id,
-                                        )
-                                    }
-                                    isUploading={
-                                        isUploading
-                                    }
-                                />
+            <Paper elevation={0} sx={{ border: "1px solid #E6ECF3", borderRadius: 3, overflow: "hidden" }}>
+                <Box
+                    sx={{
+                        display: "flex",
+                        alignItems: { xs: "stretch", sm: "center" },
+                        justifyContent: "space-between",
+                        flexDirection: { xs: "column", sm: "row" },
+                        gap: 1.5,
+                        p: 2,
+                    }}
+                >
+                    <Box>
+                        <Typography sx={{ fontSize: 15, fontWeight: 750, color: "#182D49" }}>
+                            All tenants
+                        </Typography>
+                        <Typography sx={{ fontSize: 11.5, mt: 0.25, color: "text.secondary" }}>
+                            {filteredTenants.length} of {tenants.length} tenant records
+                        </Typography>
+                    </Box>
+                    <TextField
+                        value={searchTerm}
+                        onChange={(event) => setSearchTerm(event.target.value)}
+                        placeholder="Search name or apartment…"
+                        size="small"
+                        aria-label="Search tenants by name or apartment"
+                        sx={{ width: { xs: "100%", sm: 280 }, "& .MuiOutlinedInput-root": { bgcolor: "#FFFFFF", borderRadius: 2, fontSize: 12.5 } }}
+                        slotProps={{ input: {
+                            startAdornment: (
+                                <InputAdornment position="start">
+                                    <SearchRoundedIcon fontSize="small" sx={{ color: "#7A8BA0" }} />
+                                </InputAdornment>
                             ),
-                        )}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+                        } }}
+                    />
+                </Box>
+                <TableContainer>
+                    <Table>
+                        <TableHead sx={{ bgcolor: "#F8FAFD" }}>
+                            <TableRow>
+                                <TableCell sx={{ fontSize: 10, fontWeight: 800, color: "#728197", letterSpacing: 0.6 }}>TENANT</TableCell>
+                                <TableCell sx={{ fontSize: 10, fontWeight: 800, color: "#728197", letterSpacing: 0.6 }}>APARTMENT</TableCell>
+                                <TableCell align="right" sx={{ fontSize: 10, fontWeight: 800, color: "#728197", letterSpacing: 0.6 }}>MONTHLY RENT</TableCell>
+                                <TableCell sx={{ fontSize: 10, fontWeight: 800, color: "#728197", letterSpacing: 0.6 }}>AGREEMENT</TableCell>
+                                <TableCell align="center" sx={{ fontSize: 10, fontWeight: 800, color: "#728197", letterSpacing: 0.6 }}>ACTIONS</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {filteredTenants.map((tenant) => (
+                                <TenantTableRow
+                                    key={tenant._id}
+                                    tenant={tenant}
+                                    onEdit={() => onEdit(tenant)}
+                                    onUpload={(file) => handleUpload(tenant._id, file)}
+                                    onReplace={(file) => handleReplace(tenant._id, file)}
+                                    onDelete={() => handleDeleteRequest(tenant._id)}
+                                    onDeleteTenant={() => handleDeleteTenantRequest(tenant)}
+                                    onDownload={() => handleDownload(tenant._id)}
+                                    isUploading={isUploading}
+                                />
+                            ))}
+                        </TableBody>
+                    </Table>
+                    {filteredTenants.length === 0 && (
+                        <Box sx={{ py: 5, px: 2, textAlign: "center" }}>
+                            <Typography sx={{ fontWeight: 650, fontSize: 13 }}>No matching tenants</Typography>
+                            <Typography sx={{ mt: 0.5, color: "text.secondary", fontSize: 12 }}>Try another name or apartment number.</Typography>
+                        </Box>
+                    )}
+                </TableContainer>
+            </Paper>
 
             {/* ================================================================
                 Delete Confirmation
             ================================================================= */}
 
             <ConfirmDialog
-                open={
-                    tenantToDelete !== null
-                }
+                open={agreementTenantToDelete !== null}
                 title="Delete Rental Agreement?"
                 message={
                     "Are you sure you want to delete this rental agreement? " +
-                    "This action cannot be undone."
+                    "The tenant record will remain. This action cannot be undone."
                 }
-                confirmText="Delete"
+                confirmText="Delete Agreement"
                 cancelText="Cancel"
-                loading={isDeleting}
-                onConfirm={
-                    handleConfirmDelete
-                }
-                onCancel={
-                    handleCancelDelete
-                }
+                loading={isDeletingAgreement}
+                onConfirm={handleConfirmDeleteAgreement}
+                onCancel={handleCancelDelete}
+            />
+
+            <ConfirmDialog
+                open={tenantToDelete !== null}
+                title="Delete Tenant?"
+                message={(
+                    <>
+                        Are you sure you want to remove <strong>{tenantToDelete?.tenantName}</strong>?
+                        <br />
+                        This removes the tenant record. Confirm that your backend handles any linked agreement files and related records safely.
+                    </>
+                )}
+                confirmText="Delete Tenant"
+                cancelText="Keep Tenant"
+                loading={isDeletingTenant}
+                onConfirm={handleConfirmDeleteTenant}
+                onCancel={handleCancelDeleteTenant}
             />
         </>
     );

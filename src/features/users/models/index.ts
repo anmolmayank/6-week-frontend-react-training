@@ -1,4 +1,7 @@
 export type {
-    CreateUserRequest,
-    CreateUserResponse,
+  CreateUserRequest,
+  CreateUserResponse,
+  GetUsersResponse,
+  UpdateUserRequest,
+  UpdateUserResponse,
 } from "./user.models";

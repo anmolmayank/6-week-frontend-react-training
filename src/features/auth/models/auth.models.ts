@@ -36,6 +36,11 @@ export interface RegisterRequest {
 }
 
 /**
+ * Supported application roles. The backend must return and enforce this role.
+ */
+export type UserRole = "owner" | "tenant";
+
+/**
  * ============================================================================
  * Authenticated User
  * ============================================================================
@@ -47,9 +52,16 @@ export interface AuthUser {
 
     email: string;
 
-    createdAt: string;
+    /** Persisted role returned by the Node authentication API. */
+    role: UserRole;
 
-    updatedAt: string;
+    /** Linked tenant record ID; null when the tenant account is not linked yet. */
+    tenantId: string | null;
+
+    /** These timestamps are included in login/user responses but omitted by /auth/me. */
+    createdAt?: string;
+
+    updatedAt?: string;
 }
 
 /**

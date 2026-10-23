@@ -13,13 +13,15 @@
  * - Upload agreement.
  * - Replace agreement.
  * - Delete agreement.
+ * - Request tenant deletion.
  *
  * ============================================================================
  */
 
 import { useRef } from "react";
 
-import { Box, Button } from "@mui/material";
+import { Box, Button, IconButton, Tooltip } from "@mui/material";
+import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 
 import type { RentalAgreement } from "../models";
 
@@ -40,6 +42,8 @@ export interface TenantRowActionsProps {
     onReplace: (file: File) => void;
 
     onDelete: () => void;
+
+    onDeleteTenant: () => void;
 }
 
 /**
@@ -54,6 +58,7 @@ const TenantRowActions = ({
     onUpload,
     onReplace,
     onDelete,
+    onDeleteTenant,
 }: TenantRowActionsProps) => {
     /**
      * ------------------------------------------------------------------------
@@ -167,6 +172,23 @@ const TenantRowActions = ({
                         Delete
                     </Button>
                 )}
+
+                {/* ============================================================
+                    Delete Tenant
+                ============================================================= */}
+                <Tooltip title="Delete tenant">
+                    <span>
+                        <IconButton
+                            size="small"
+                            color="error"
+                            aria-label="Delete tenant"
+                            onClick={onDeleteTenant}
+                            disabled={isUploading}
+                        >
+                            <DeleteOutlineRoundedIcon fontSize="small" />
+                        </IconButton>
+                    </span>
+                </Tooltip>
             </Box>
         </>
     );

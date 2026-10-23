@@ -1,92 +1,54 @@
-
 /**
  * ============================================================================
  * Authentication API Endpoints
  * ============================================================================
- *
- * Purpose
- * -------
- * Registers authentication-related API endpoints.
- *
- * Responsibilities
- * ----------------
- * - Authenticate users through the login endpoint.
- * - Persist the access token after successful login.
- * - Notify the application when authentication changes.
- *
- * Learning Notes
- * --------------
- * RTK Query remains responsible for the login request lifecycle.
- * Session utilities synchronize UI visibility with token changes.
- *
+ * Login persists the token and backend-issued user identity. GET /auth/me is
+ * the source of truth when restoring a session from browser storage.
  * ============================================================================
  */
-
 import { baseApi } from "@/app/api/baseApi";
-import { STORAGE_KEYS } from "@/shared/constants";
+import { clearAuthSession, saveAuthSession, saveAuthenticatedUser } from "../utils/authSession";
+import type { LoginRequest, LoginResponse, AuthUser } from "../models";
+import type { ApiResponse } from "@/shared/models";
 
-import { notifyAuthSessionChanged } from "../utils/authSession";
+type CurrentUserResponse = ApiResponse<AuthUser>;
 
-import type {
-  LoginRequest,
-  LoginResponse,
-} from "../models";
-
-/**
- * ============================================================================
- * Authentication Endpoints
- * ============================================================================
- */
 export const authApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    /**
-     * ------------------------------------------------------------------------
-     * Login
-     * ------------------------------------------------------------------------
-     *
-     * Persists the access token only after the login request succeeds.
-     */
     login: builder.mutation<LoginResponse, LoginRequest>({
       query: (body) => ({
         url: "/auth/login",
         method: "POST",
         body,
       }),
-
-      /**
-       * ----------------------------------------------------------------------
-       * Persist Access Token
-       * ----------------------------------------------------------------------
-       */
       async onQueryStarted(_, { queryFulfilled }) {
         try {
           const { data } = await queryFulfilled;
-
-          localStorage.setItem(
-            STORAGE_KEYS.ACCESS_TOKEN,
-            data.data.accessToken,
-          );
-
-          // Make the new session visible to subscribed UI components.
-          notifyAuthSessionChanged();
+          saveAuthSession(data.data.accessToken, data.data.user);
         } catch {
-          /**
-           * Login errors remain available through the RTK Query mutation
-           * result and are handled by the login form.
-           */
+          // The login form displays the RTK Query error to the user.
         }
       },
-
       invalidatesTags: ["Auth"],
+    }),
+
+    /** Refreshes persisted role/tenant association from the authenticated API. */
+    getCurrentUser: builder.query<CurrentUserResponse, void>({
+      query: () => ({ url: "/auth/me", method: "GET" }),
+      providesTags: ["Auth"],
+      async onQueryStarted(_, { queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          saveAuthenticatedUser(data.data);
+        } catch (caught: unknown) {
+          const rejection = caught as { error?: { status?: number | string } };
+          if (rejection.error?.status === 401) {
+            clearAuthSession();
+          }
+        }
+      },
     }),
   }),
 });
 
-/**
- * ============================================================================
- * RTK Query Hooks
- * ============================================================================
- */
-export const {
-  useLoginMutation,
-} = authApi;
+export const { useLoginMutation, useGetCurrentUserQuery } = authApi;

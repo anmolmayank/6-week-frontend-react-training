@@ -1,4 +1,6 @@
 export {
-    userApi,
-    useCreateUserMutation,
+  userApi,
+  useCreateUserMutation,
+  useGetUsersQuery,
+  useUpdateUserMutation,
 } from "./user.endpoints";

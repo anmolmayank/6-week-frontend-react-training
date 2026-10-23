@@ -20,13 +20,14 @@ import type { ApiResponse } from "@/shared/models";
  * ============================================================================
  */
 export interface RentalAgreement {
-    fileName: string;
+    /** Original upload name returned by the Node.js tenant model. */
+    originalName: string;
 
     mimeType: string;
 
     size: number;
 
-    path: string;
+    uploadedAt: string;
 }
 
 /**
@@ -103,3 +104,22 @@ export interface UpdateTenantRequest {
  * ============================================================================
  */
 export type UpdateTenantResponse = ApiResponse<Tenant>;
+
+/** Sanitized profile returned by GET /api/v1/tenants/me. */
+export interface TenantSelfProfile {
+    _id: string;
+    tenantName: string;
+    apartmentNumber: string;
+    monthlyRent: number;
+    rentalAgreement: TenantSelfAgreement | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
+/** Agreement metadata shown to the tenant; it intentionally has no disk path. */
+export interface TenantSelfAgreement {
+    originalName: string;
+    mimeType: string;
+    size: number;
+    uploadedAt: string;
+}

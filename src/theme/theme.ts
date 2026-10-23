@@ -35,7 +35,7 @@ const theme = createTheme({
         mode: "light",
 
         primary: {
-            main: "#1976d2",
+            main: "#1976D2",
         },
 
         secondary: {
@@ -43,7 +43,7 @@ const theme = createTheme({
         },
 
         background: {
-            default: "#f5f5f5",
+            default: "#F3F6FA",
             paper: "#ffffff",
         },
     },
@@ -58,7 +58,8 @@ const theme = createTheme({
         ].join(","),
 
         h4: {
-            fontWeight: 600,
+            fontWeight: 700,
+            letterSpacing: "-0.025em",
         },
 
         h5: {
